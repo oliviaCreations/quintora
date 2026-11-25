@@ -629,7 +629,7 @@ function renderSpells(phase){
  ];
  const info=spells.find(s=>s[0]===spell)||spells.find(s=>s[0]===window.qSpellInfo)||spells[0];
  const explain=(item)=>language==='nl'?item[2]:({expelliarmus:'Return an opponent’s tile to their hand. They must place it again on their next turn.',leviosa:'Move one of your tiles, or an opponent’s tile, to another valid position.',flipendo:'Turn any tile face-down or face-up. Face-down tiles do not count toward a winning line.'}[item[0]]||item[2]);
- $('spells').innerHTML='<div class="spell-gallery">'+spells.map(([id,name,nl,idx])=>`<div class="spell-item"><button class="spell spell-card spell-${id} ${spell===id?'active':''}" data-spell="${id}" title="${name}" aria-label="${name}" ${phase!=='magic'||animationBusy||state.players[state.turn].bot||(state.online&&!window.QuintoraBridge?.canAct())?'disabled':''}><img src="${Q_SPELL_ICONS[idx]}" alt="${name}"/></button><span class="q-spell-name">${name}</span><button type="button" class="spell-info" data-info="${id}" aria-pressed="${info[0]===id}">${language==='nl'?'ⓘ Uitleg':'ⓘ Info'}</button></div>`).join('')+'</div>'+`<div class="spell-explainer" aria-live="polite"><strong>${info[1]}</strong>${explain(info)}</div>`;
+ $('spells').innerHTML='<div class="spell-gallery">'+spells.map(([id,name,nl,idx])=>`<div class="spell-item"><button class="spell spell-card spell-${id} ${spell===id?'active':''}" data-spell="${id}" title="${name}" aria-label="${name}" ${phase!=='magic'||animationBusy||state.players[state.turn].bot||(state.online&&!window.QuintoraBridge?.canAct())||(qTutorialLessonActive&&Q_LESSONS[qTutorialIndex]?.kind==='spells'&&id!==Q_SPELL_ORDER[qTutorialSubstep])?'disabled':''}><img src="${Q_SPELL_ICONS[idx]}" alt="${name}"/></button><span class="q-spell-name">${name}</span><button type="button" class="spell-info" data-info="${id}" aria-pressed="${info[0]===id}">${language==='nl'?'ⓘ Uitleg':'ⓘ Info'}</button></div>`).join('')+'</div>'+`<div class="spell-explainer" aria-live="polite"><strong>${info[1]}</strong>${explain(info)}</div>`;
  document.querySelectorAll('[data-spell]').forEach(el=>el.onclick=()=>{if(animationBusy)return;spell=el.dataset.spell;window.qSpellInfo=spell;selection=null;if(qTutorialLessonActive){qTutorialSpell=spell;qTutorialSelected=null;qTutorRender();}else render()});
  document.querySelectorAll('[data-info]').forEach(el=>el.onclick=()=>{window.qSpellInfo=el.dataset.info;const item=spells.find(s=>s[0]===window.qSpellInfo);const field=$('spells').querySelector('.spell-explainer');if(field){field.replaceChildren();const strong=document.createElement('strong');strong.textContent=item[1];field.append(strong,document.createTextNode(explain(item)));}$('spells').querySelectorAll('[data-info]').forEach(b=>b.setAttribute('aria-pressed',String(b===el)));});
 }
@@ -640,41 +640,33 @@ function adjustZoom(m){boardEl.classList.remove('q-auto-camera');clearTimeout(qC
 vp.addEventListener('pointerdown',e=>{boardEl.classList.remove('q-auto-camera');clearTimeout(qCameraTimer);drag={x:e.clientX,y:e.clientY,px:pan.x,py:pan.y,moved:false};/* Laat gewone klikken op tegels doorkomen; slepen gebruikt pointerbeweging. */});vp.addEventListener('pointermove',e=>{if(!drag)return;const dx=e.clientX-drag.x,dy=e.clientY-drag.y;if(Math.hypot(dx,dy)>8)drag.moved=true;if(drag.moved){vp.classList.add('dragging');pan={x:drag.px+dx,y:drag.py+dy};position()}});vp.addEventListener('pointerup',()=>{vp.classList.remove('dragging');if(drag){const d=drag;setTimeout(()=>{if(drag===d)drag=null},0)}});window.addEventListener('pointerup',()=>{vp.classList.remove('dragging');drag=null});vp.addEventListener('wheel',e=>{e.preventDefault();adjustZoom(e.deltaY>0?.9:1.1)},{passive:false});$('zoomIn').onclick=()=>adjustZoom(1.2);$('zoomOut').onclick=()=>adjustZoom(1/1.2);$('center').onclick=center;$('cancel').onclick=()=>{if(animationBusy)return;selection=null;spell=null;render()};
 // -------- Guided offline tutorial (no Firebase writes) --------
 const Q_LESSONS=[
- {lesson:1,kind:'place',title:['Your first tile','Je eerste tegel'],msg:['Each new tile must share a full edge with an existing tile. Place your tile next to the green Slytherin tile.','Elke nieuwe tegel moet met een volledige zijde aan een bestaande tegel grenzen. Plaats een tegel naast de groene tegel van Zwadderich.'],tiles:[[0,0,0]],hint:['Diagonal or distant tiles are not allowed. Try a square directly beside the red tile.','Diagonaal of op afstand plaatsen mag niet. Kies een vak direct naast de groene tegel van Zwadderich tegel.']},
- {lesson:2,kind:'win',title:['Five in a row','Vijf op een rij'],msg:['Make a row of five of your own tiles. Horizontal, vertical and diagonal all count!','Maak vijf van je eigen tegels op één rij. Horizontaal, verticaal en diagonaal tellen allemaal!'],tiles:[[0,0,0],[1,0,0],[2,0,0],[3,0,0]],hint:['Complete the row of four green Slytherin tiles.','Maak de rij van vier groene tegels compleet.']},
- {lesson:2,kind:'block',title:['Block your opponent','Blokkeer je tegenstander'],msg:['Hufflepuff has four tiles in a row. Place a green tile to stop a win.','Huffelpuf heeft vier tegels op een rij. Plaats een groene tegel om de overwinning te verhinderen.'],tiles:[[0,0,1],[1,0,1],[2,0,1],[3,0,1],[0,1,0]],hint:['Place your tile at the open end of the Hufflepuff row.','Plaats je tegel aan het open uiteinde van de rij van Huffelpuf.']},
- {lesson:3,kind:'move',title:['Second phase: Muggle Rules','Tweede fase: Dreuzelregels'],msg:['Your supply is empty. Select one of your own Slytherin tiles, then move it to a valid empty space without breaking the connected board.','Je voorraad is op. Selecteer één van je eigen groene tegels en verplaats die naar een geldig leeg vak zonder het speelveld te splitsen.'],tiles:[[0,0,0],[1,0,0],[2,0,0],[3,0,1],[3,1,1]],hint:['You may only move your own tiles. The remaining board must stay connected.','Je mag alleen eigen tegels verplaatsen. Het overige speelveld moet verbonden blijven.']},
- {lesson:4,kind:'expelliarmus',title:['Expelliarmus','Expelliarmus'],msg:['Wizarding Rules unlock spells when your supply is empty. Choose Expelliarmus and return a Hufflepuff tile to its owner’s hand.','Bij Tovenaarsregels kun je spreuken gebruiken zodra je voorraad op is. Kies Expelliarmus en stuur een tegel van Huffelpuf terug naar de hand van zijn eigenaar.'],tiles:[[0,0,0],[0,1,0],[1,0,1],[1,1,1]],hint:['Choose Expelliarmus, then select a Hufflepuff tile that does not disconnect the board.','Kies Expelliarmus en daarna een tegel van Huffelpuf die het speelveld niet splitst.']},
- {lesson:4,kind:'leviosa',title:['Wingardium Leviosa','Wingardium Leviosa'],msg:['Choose Wingardium Leviosa. You can move even an opponent’s tile to a new valid position!','Kies Wingardium Leviosa. Hiermee kun je zelfs een tegel van een tegenstander naar een nieuwe geldige positie verplaatsen!'],tiles:[[0,0,0],[1,0,1],[2,0,0],[1,1,1]],hint:['Select either player’s tile, then an adjacent empty space. Keep the board connected.','Selecteer een tegel van jezelf of de tegenstander en daarna een aangrenzend leeg vak. Houd het speelveld verbonden.']},
- {lesson:4,kind:'flipendo',title:['Flipendo','Flipendo'],msg:['Choose Flipendo, then turn any tile face-down. Face-down tiles still connect the board but do not count toward five in a row.','Kies Flipendo en draai een tegel om. Omgedraaide tegels verbinden het bord nog wel, maar tellen niet mee voor vijf op een rij.'],tiles:[[0,0,0],[1,0,1],[2,0,1]],hint:['Select Flipendo and tap an existing tile.','Kies Flipendo en tik op een bestaande tegel.']},
- {lesson:5,kind:'duel-muggle',title:['Your first duel: Muggle Rules','Je eerste duel: Dreuzelregels'],msg:['Play a quick five-tile match against a forgiving AI. Remember: in phase two you can only move your own tiles.','Speel een kort duel met vijf tegels tegen een vergevingsgezinde AI. Onthoud: in fase twee kun je alleen je eigen tegels verplaatsen.'],tiles:[]},
- {lesson:5,kind:'duel-magic',title:['Your magical duel','Je magische duel'],msg:['Try a quick Wizarding Rules match. With Wingardium Leviosa you may also move your opponent’s tiles!','Probeer een kort duel met Tovenaarsregels. Met Wingardium Leviosa mag je ook tegels van je tegenstander verplaatsen!'],tiles:[]}
+ {lesson:1,kind:'opening',title:['Your first tiles','Je eerste tegels'],msg:['Place the opening tile on the empty board.','Plaats de openingstegel op het lege speelveld.'],tiles:[],hint:['Choose the highlighted opening position.','Kies het startvak op het speelveld.']},
+ {lesson:2,kind:'win',title:['Five in a row','Vijf op een rij'],msg:['You are Slytherin. Complete your horizontal row of four to win!','Jij bent Zwadderich. Maak je horizontale rij van vier af om te winnen!'],tiles:[[0,0,1],[1,0,1],[2,0,1],[3,0,1],[0,1,0],[1,1,0],[2,1,0],[3,1,0]],hint:['Extend the green row at its free end.','Verleng de groene rij aan een vrij uiteinde.']},
+ {lesson:3,kind:'block',title:['Block your opponent','Blokkeer je tegenstander'],msg:['Hufflepuff is threatening to make five in a row. Place one tile to block them.','Huffelpuf dreigt vijf op een rij te krijgen. Plaats een tegel om dat te verhinderen.'],tiles:[[0,0,1],[1,0,1],[2,0,1],[3,0,1],[0,1,0],[1,1,0],[2,1,0],[3,1,0]],hint:['Block the yellow row, not your own row.','Blokkeer de gele rij, niet je eigen rij.']},
+ {lesson:4,kind:'move',title:['Second phase: Muggle Rules','Tweede fase: Dreuzelregels'],msg:['Both players have placed all five tiles. Select one of your OWN green tiles and move it to a valid empty space.','Beide spelers hebben hun vijf tegels gelegd. Kies een EIGEN groene tegel en verplaats die naar een geldige vrije plek.'],tiles:[[0,1,0],[1,1,0],[2,1,0],[0,2,0],[1,2,0],[0,0,1],[1,0,1],[2,0,1],[3,0,1],[3,1,1]],hint:['Only your own tiles may move, and the remaining board must stay connected.','Je mag alleen eigen tegels verplaatsen en het resterende bord moet verbonden blijven.']},
+ {lesson:5,kind:'spells',title:['The three spells','De drie spreuken'],msg:['Use Expelliarmus to return a Hufflepuff tile to their hand.','Gebruik Expelliarmus om een tegel van Huffelpuf naar hun voorraad terug te sturen.'],tiles:[[0,1,0],[1,1,0],[2,1,0],[0,2,0],[1,2,0],[0,0,1],[1,0,1],[2,0,1],[0,-1,1],[1,-1,1]],hint:['Select the glowing spell and a valid target without disconnecting the board.','Selecteer de oplichtende spreuk en een geldig doelwit zonder het bord te splitsen.']},
+ {lesson:null,kind:'duel-muggle',title:['Your first duel: Muggle Rules','Je eerste duel: Dreuzelregels'],msg:['Play a quick duel against a forgiving AI.','Speel een kort duel tegen een vergevingsgezinde AI.'],tiles:[]},
+ {lesson:null,kind:'duel-magic',title:['Your magical duel','Je magische duel'],msg:['Play a short Wizarding Rules duel.','Speel een kort duel met Tovenaarsregels.'],tiles:[]}
 ];
-let qTutorialIndex=0,qTutorialBoard=new Map(),qTutorialSelected=null,qTutorialSpell=null,qTutorialDone=false,qTutorialDuel=null,qTutorialReminder=false,qTutorialCast=false,qTutorialLessonActive=false;
+let qTutorialIndex=0,qTutorialBoard=new Map(),qTutorialSelected=null,qTutorialSpell=null,qTutorialDone=false,qTutorialDuel=null,qTutorialReminder=false,qTutorialCast=false,qTutorialLessonActive=false,qTutorialSubstep=0,qTutorialBotTimeout=null;
 const qLang=pair=>pair[language==='nl'?1:0];
+const Q_SPELL_ORDER=['expelliarmus','leviosa','flipendo'];
 function qTutorBoardValid(b){if(b.size<=1)return true;const seen=new Set([b.keys().next().value]),queue=[...seen];for(let i=0;i<queue.length;i++){const [x,y]=unkey(queue[i]);for(const [dx,dy] of DIRS){const id=k(x+dx,y+dy);if(b.has(id)&&!seen.has(id)){seen.add(id);queue.push(id);}}}return seen.size===b.size;}
 function qTutorCanPlace(x,y,b){return !b.has(k(x,y))&&(b.size===0||DIRS.some(([dx,dy])=>b.has(k(x+dx,y+dy))));}
 function qTutorPrepareLesson(){
+ clearTimeout(qTutorialBotTimeout);
  const stage=Q_LESSONS[qTutorialIndex];
  qTutorialBoard=new Map(stage.tiles.map(([x,y,owner])=>[k(x,y),{owner,down:false}]));
- qTutorialSelected=null;qTutorialSpell=null;qTutorialDone=false;qTutorialReminder=true;
+ qTutorialSelected=null;qTutorialSpell=null;qTutorialDone=false;qTutorialReminder=true;qTutorialSubstep=0;
  $('q-tutorial-lesson-feedback').textContent='';$('q-tutorial-lesson-feedback').classList.remove('q-feedback-success');
  selection=null;spell=null;window.qSpellInfo=null;
- // A prepared match position using the same actual tile art, board, viewport and spell controls.
- // Slytherin is always player 1; Hufflepuff is always the tutorial opponent.
- const magic=['expelliarmus','leviosa','flipendo'].includes(stage.kind);
- const canPlaceTile=['place','win','block'].includes(stage.kind);
- state={tiles:5,difficulty:'beginner',players:[{house:3,hand:canPlaceTile?1:0,bot:false},{house:2,hand:0,bot:true}],mode:magic?'magic':'muggle',board:qTutorialBoard,turn:0,over:false,history:[],online:false,tutorial:true};
+ const magic=stage.kind==='spells';
+ state={tiles:5,difficulty:'beginner',players:[{house:3,hand:stage.kind==='opening'?5:stage.kind==='win'||stage.kind==='block'?1:0,bot:false},{house:2,hand:stage.kind==='opening'?5:stage.kind==='win'||stage.kind==='block'?1:0,bot:true}],mode:magic?'magic':'muggle',board:qTutorialBoard,turn:0,over:false,history:[],online:false,tutorial:true};
  qTutorialLessonActive=true;
- $('q-tutorial-modal').classList.add('hidden');$('q-entry').classList.add('hidden');$('setup').classList.add('hidden');$('winner').classList.add('hidden');
- $('q-tutorial-coach').classList.add('hidden');
- qTutorRender();
- center();
+ $('q-tutorial-modal').classList.add('hidden');$('q-entry').classList.add('hidden');$('setup').classList.add('hidden');$('winner').classList.add('hidden');$('q-tutorial-coach').classList.add('hidden');
+ qTutorRender();center();
 }
-function qTutorReset(){
- if(!qTutorialLessonActive)return;
- qTutorPrepareLesson();
-}
+function qTutorReset(){if(qTutorialLessonActive)qTutorPrepareLesson();}
 function qTutorFeedback(good,detail){
  const coach=$('q-tutorial-lesson-feedback');
  coach.textContent=detail||(good?(language==='nl'?'Goed gedaan! ✨':'Well done! ✨'):qLang(Q_LESSONS[qTutorialIndex].hint||['Try again.','Probeer opnieuw.']));
@@ -685,7 +677,6 @@ function qTutorFeedback(good,detail){
 function qTutorRender(){
  if(!qTutorialLessonActive||!state)return;
  const stage=Q_LESSONS[qTutorialIndex];
- // Sync state with the existing renderer; never construct substitute tutorial tiles.
  state.board=qTutorialBoard;
  selection=qTutorialSelected?{x:unkey(qTutorialSelected)[0],y:unkey(qTutorialSelected)[1]}:null;
  spell=qTutorialSpell;
@@ -693,25 +684,84 @@ function qTutorRender(){
  const bar=$('q-tutorial-lesson-coach');bar.classList.remove('hidden');
  $('q-tutorial-lesson-progress').textContent=(language==='nl'?'LES ':'LESSON ')+stage.lesson+'/5';
  $('q-tutorial-lesson-title').textContent=qLang(stage.title);
- $('q-tutorial-lesson-instruction').textContent=qLang(stage.msg);
+ let message=qLang(stage.msg);
+ if(stage.kind==='opening'&&qTutorialSubstep===1)message=qLang(['Hufflepuff is placing a tile…','Huffelpuf plaatst nu een tegel…']);
+ if(stage.kind==='opening'&&qTutorialSubstep===2)message=qLang(['Hufflepuff has played. Place your second green tile beside an existing tile.','Huffelpuf heeft gespeeld. Plaats je tweede groene tegel naast een bestaande tegel.']);
+ if(stage.kind==='spells'&&qTutorialSubstep===1)message=qLang(['Now use Wingardium Leviosa. It can move your own OR an opponent’s tile.','Gebruik nu Wingardium Leviosa. Daarmee mag je een eigen tegel OF die van je tegenstander verplaatsen.']);
+ if(stage.kind==='spells'&&qTutorialSubstep===2)message=qLang(['Finally, use Flipendo to turn a tile over.','Gebruik ten slotte Flipendo om een tegel om te draaien.']);
+ $('q-tutorial-lesson-instruction').textContent=message;
  const next=$('q-tutorial-lesson-next');next.disabled=!qTutorialDone;
  next.textContent=language==='nl'?'Verder →':'Continue →';
  $('q-tutorial-lesson-retry').textContent=language==='nl'?'↻ Opnieuw':'↻ Retry';
  $('q-tutorial-lesson-exit').textContent=language==='nl'?'Verlaten ✕':'Exit ✕';
 }
+function qTutorBotAction(action){
+ qTutorialSpell=null;qTutorialSelected=null;spell=null;selection=null;
+ state.turn=1;qTutorRender();
+ const lessonIndex=qTutorialIndex;
+ qTutorialBotTimeout=setTimeout(()=>{
+  if(!qTutorialLessonActive||lessonIndex!==qTutorialIndex)return;
+  const b=new Map(qTutorialBoard);
+  if(action==='opening'){
+   // Opponent's real turn after the player's opening move.
+   const target=[1,0];if(qTutorCanPlace(...target,b)){b.set(k(...target),{owner:1,down:false});state.players[1].hand--;}
+   qTutorialSubstep=2;
+  }else if(action==='after-expelliarmus'){
+   // The disarmed Hufflepuff tile must be placed again on their next turn.
+   const legal=[[2,-1],[3,0],[2,2],[3,1]].find(([x,y])=>qTutorCanPlace(x,y,b));
+   if(legal){b.set(k(...legal),{owner:1,down:false});state.players[1].hand=Math.max(0,state.players[1].hand-1);}
+   qTutorialSubstep=1;
+  }else if(action==='after-leviosa'){
+   // Hufflepuff visibly takes a legal movement turn regardless of which tile
+   // the player chose for Wingardium Leviosa.
+   let moved=false;
+   for(const [source,tile] of b){
+    if(tile.owner!==1)continue;
+    const reduced=new Map(b);reduced.delete(source);
+    if(!qTutorBoardValid(reduced))continue;
+    const targets=new Set();
+    for(const key of reduced.keys()){
+     const [ox,oy]=unkey(key);
+     for(const [dx,dy] of DIRS){const x=ox+dx,y=oy+dy;
+      if(k(x,y)!==source&&qTutorCanPlace(x,y,reduced))targets.add(k(x,y));}
+    }
+    for(const dest of targets){
+     const candidate=new Map(reduced);candidate.set(dest,tile);
+     if(qTutorBoardValid(candidate)){
+      b.clear();for(const [key,val] of candidate)b.set(key,val);
+      moved=true;break;
+     }
+    }
+    if(moved)break;
+   }
+   qTutorialSubstep=2;
+  }
+  qTutorialBoard=b;state.board=b;state.turn=0;qTutorialDone=false;
+  $('q-tutorial-lesson-feedback').textContent=qLang(['Hufflepuff has played. Your turn!','Huffelpuf heeft gespeeld. Jij bent aan zet!']);
+  qTutorRender();
+ },650);
+}
+function qTutorSpellCompleted(detail){
+ const current=qTutorialSubstep;
+ if(current===0){state.players[1].hand++;qTutorialSpell=null;qTutorialSelected=null;qTutorBotAction('after-expelliarmus');}
+ else if(current===1){qTutorialSpell=null;qTutorialSelected=null;qTutorBotAction('after-leviosa');}
+ else {qTutorFeedback(true,detail);}
+}
 function qTutorCell(x,y){
- if(qTutorialDone)return;
+ if(qTutorialDone||state.turn!==0)return;
  const stage=Q_LESSONS[qTutorialIndex],kind=stage.kind,id=k(x,y),t=qTutorialBoard.get(id);
  const fail=()=>qTutorFeedback(false);
- if(['place','win','block'].includes(kind)){
+ if(['opening','win','block'].includes(kind)){
   if(!qTutorCanPlace(x,y,qTutorialBoard))return fail();
-  const b=new Map(qTutorialBoard);b.set(id,{owner:0,down:false});
-  if(kind==='win'&&!([[-1,0],[4,0]].some(([a,b])=>x===a&&y===b)))return fail();
-  if(kind==='block'&&x!==4||kind==='block'&&y!==0)return fail();
-  qTutorialBoard=b;qTutorFeedback(true);return;
+  if(kind==='opening'&&qTutorialSubstep===0&&(x!==0||y!==0))return fail();
+  if(kind==='win'&&!(y===1&&(x===-1||x===4)))return fail();
+  if(kind==='block'&&!(y===0&&(x===-1||x===4)))return fail();
+  const b=new Map(qTutorialBoard);b.set(id,{owner:0,down:false});qTutorialBoard=b;state.players[0].hand=Math.max(0,state.players[0].hand-1);
+  if(kind==='opening'&&qTutorialSubstep===0){qTutorialSubstep=1;qTutorBotAction('opening');return;}
+  qTutorFeedback(true);return;
  }
- if(kind==='move'||kind==='leviosa'){
-  if(kind==='leviosa'&&qTutorialSpell!=='leviosa')return fail();
+ if(kind==='move'||kind==='spells'&&qTutorialSubstep===1){
+  if(kind==='spells'&&qTutorialSpell!=='leviosa')return fail();
   if(!qTutorialSelected){
    if(!t||(kind==='move'&&t.owner!==0))return fail();
    const b=new Map(qTutorialBoard);b.delete(id);if(!qTutorBoardValid(b))return fail();
@@ -721,20 +771,22 @@ function qTutorCell(x,y){
   if(t)return fail();
   const b=new Map(qTutorialBoard),from=b.get(qTutorialSelected);b.delete(qTutorialSelected);
   if(!qTutorBoardValid(b)||!qTutorCanPlace(x,y,b))return fail();
-  b.set(id,from);qTutorialBoard=b;qTutorialSelected=null;qTutorFeedback(true);return;
+  b.set(id,from);qTutorialBoard=b;qTutorialSelected=null;
+  if(kind==='spells'){qTutorSpellCompleted();return;}
+  qTutorFeedback(true);return;
  }
- if(kind==='expelliarmus'){
-  if(qTutorialSpell!=='expelliarmus'||!t||t.owner===0)return fail();
+ if(kind==='spells'&&qTutorialSubstep===0){
+  if(qTutorialSpell!=='expelliarmus'||!t||t.owner!==1)return fail();
   const b=new Map(qTutorialBoard);b.delete(id);if(!qTutorBoardValid(b))return fail();
-  qTutorialBoard=b;qTutorFeedback(true,language==='nl'?'De tegel is terug in de voorraad van de tegenstander. ✨':'The tile has returned to your opponent’s hand. ✨');return;
+  qTutorialBoard=b;qTutorSpellCompleted();return;
  }
- if(kind==='flipendo'){
+ if(kind==='spells'&&qTutorialSubstep===2){
   if(qTutorialSpell!=='flipendo'||!t)return fail();
-  qTutorialBoard.set(id,{...t,down:!t.down});qTutorFeedback(true);return;
+  qTutorialBoard.set(id,{...t,down:!t.down});qTutorSpellCompleted();return;
  }
 }
 function qTutorialOpen(){qTutorialDuel=null;qTutorialLessonActive=true;qTutorialIndex=0;$('q-tutorial-reset').style.display='';$('q-tutorial-next').onclick=()=>{if(!qTutorialDone)return;qTutorialIndex++;qTutorAdvance();};qTutorPrepareLesson();}
-function qTutorialExit(){$('q-tutorial-lesson-coach').classList.add('hidden');qTutorialLessonActive=false;qTutorialDuel=null;qTutorialCast=false;clearTimeout(botTimer);$('q-tutorial-modal').classList.add('hidden');$('q-tutorial-coach').classList.add('hidden');$('winner').classList.add('hidden');$('q-entry').classList.remove('hidden');$('setup').classList.add('hidden');animationEpoch++;animationBusy=false;state=null;document.body.classList.remove('q-busy');}
+function qTutorialExit(){clearTimeout(qTutorialBotTimeout);$('q-tutorial-lesson-coach').classList.add('hidden');qTutorialLessonActive=false;qTutorialDuel=null;qTutorialCast=false;clearTimeout(botTimer);$('q-tutorial-modal').classList.add('hidden');$('q-tutorial-coach').classList.add('hidden');$('winner').classList.add('hidden');$('q-entry').classList.remove('hidden');$('setup').classList.add('hidden');animationEpoch++;animationBusy=false;state=null;document.body.classList.remove('q-busy');}
 function qTutorCoach(msg,complete=false){const bar=$('q-tutorial-coach');bar.classList.remove('hidden');bar.replaceChildren(document.createTextNode(msg));const btn=document.createElement('button');btn.className='quiet';btn.textContent=language==='nl'?'Tutorial verlaten':'Exit tutorial';btn.onclick=qTutorialExit;bar.append(btn);if(complete){const done=document.createElement('button');done.className='primary';done.textContent=language==='nl'?'Verder →':'Continue →';done.onclick=()=>{qTutorialIndex++;qTutorAdvance();};bar.append(done);}}
 function qTutorBeginDuel(mode){
  $('q-tutorial-modal').classList.add('hidden');$('winner').classList.add('hidden');$('q-entry').classList.add('hidden');$('setup').classList.add('hidden');
@@ -758,7 +810,7 @@ function qTutorDuelEnd(){
  }
 }
 function qTutorAdvance(){
- $('q-tutorial-coach').classList.add('hidden');$('q-tutorial-lesson-coach').classList.add('hidden');$('winner').classList.add('hidden');
+ clearTimeout(qTutorialBotTimeout);$('q-tutorial-coach').classList.add('hidden');$('q-tutorial-lesson-coach').classList.add('hidden');$('winner').classList.add('hidden');
  if(qTutorialIndex>=Q_LESSONS.length){
   qTutorialLessonActive=false;qTutorialDuel=null;state=null;$('q-tutorial-modal').classList.remove('hidden');
   $('q-tutorial-title').textContent=language==='nl'?'Tutorial voltooid!':'Tutorial completed!';
